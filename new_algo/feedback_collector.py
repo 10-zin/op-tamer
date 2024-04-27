@@ -1,5 +1,5 @@
 import random
-from dataset_loader import DataWeigher
+from .dataset_loader import DataWeigher
 
 class FeedbackCollector:
     def __init__(self, feedback_threshold=10, history_buffer_size=100):
