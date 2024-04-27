@@ -2,8 +2,12 @@ import numpy as np
 import pygame
 from pygame.locals import *
 from utils import saveObject, get_feat_frozenlake
-from tamer_updates import get_greedy_action, update_reward_model
-from new_algo import feedback_collector, dataset_loader, main_training, update_reward_model
+from tamer_updates import get_greedy_action, update_reward_model as simple_update_reward_model
+from tamer_updates import update_reward_model_with_credit
+from new_algo.feedback_collector import FeedbackCollector
+from new_algo.update_reward_model import update_reward_model_weighted_contrastive as contrastive_update_reward_model
+from new_algo import dataset_loader, main_training
+
 from env import IRLEnv
 
 FB_KEY_DICT = {
@@ -19,7 +23,7 @@ ACT_DICT = {
 }
 
 def init_new_algo():
-    feedback_collector.FeedbackCollector(feedback_threshold=5, history_buffer_size=20)
+    return FeedbackCollector(feedback_threshold=5, history_buffer_size=20)
 
 class TamerOld:
     def __init__(self, ):
@@ -30,7 +34,13 @@ class TamerOld:
         self.dummy_obs = get_feat_frozenlake([0, 0], 0)
         self.featDims = dummy_obs.shape[0]
         self.learning_rate = 1e-1
-        self.theta = np.random.uniform(low=-1, high=1, size=(featDims, 1))  # Initialize theta
+        
+        # Update: initialization to smaller range or zero - new edit
+        self.theta = np.random.uniform(low=-0.1, high=0.1, size=(featDims, 1))
+
+        # Original
+        # self.theta = np.random.uniform(low=-1, high=1, size=(featDims, 1))  # Initialize theta
+
         # prep reward learning dataset
         self.inputs = []
         self.targets = []
@@ -100,7 +110,7 @@ class TamerOld:
                     print("No")
 
                 if was_feedback_provided:
-                    theta = update_reward_model(obs, act_idx, theta, fb_val, learning_rate)
+                    theta = simple_update_reward_model(obs, act_idx, theta, fb_val, learning_rate)
 
                 total_reward += rew
 
@@ -116,8 +126,14 @@ class TamerOld:
 class TamerUpdated(TamerOld):
     def __init__(self,):
         super().__init__()
-        self.feedback_collector = feedback_collector.FeedbackCollector(feedback_threshold=6, history_buffer_size=30)
-        self.update_reward_model = update_reward_model.update_reward_model_weighted_contrastive
+        
+        # Update: Directly use FeedbackCollector class to instantiate - new edit
+        self.feedback_collector = FeedbackCollector(feedback_threshold=6, history_buffer_size=30)
+        self.update_reward_model = contrastive_update_reward_model
+
+        # Original
+        # self.feedback_collector = feedback_collector.FeedbackCollector(feedback_threshold=6, history_buffer_size=30)
+        # self.update_reward_model = contrastive_update_reward_model.update_reward_model_weighted_contrastive
 
     def train(self,):
         while True:
@@ -174,7 +190,7 @@ class TamerUpdated(TamerOld):
                     print("No")
 
                 if was_feedback_provided:
-                    self.feedback_collector.collect_feedback((obs, act_idx), fb_val)
+                    feedback_collector.collect_feedback((obs, act_idx), fb_val)
                     if self.feedback_collector.is_enough_feedback():
                         weighted_contrastive_pairs = self.feedback_collector.form_weighted_constrastive_pairs()
                         self.update_reward_model(weighted_contrastive_pairs, self.theta, learning_rate=1e-2, margin=20)
@@ -200,7 +216,7 @@ class TamerUpdated(TamerOld):
             T_terminal = t + 1
             print('Episode return:', total_reward)
 
-
+# Original main function
 if __name__ == "__main__":
     T = 25  # Max time steps for the game (i.e., episode horizon)
     np.random.seed(100)  # Set random seed for repeatability
@@ -208,10 +224,16 @@ if __name__ == "__main__":
     # init network
     dummy_obs = get_feat_frozenlake([0, 0], 0)
     featDims = dummy_obs.shape[0]
-    learning_rate = 1e-1
+
+    # Update: smaller learning rate - new edit
+    learning_rate = 1e-3  # Reduced from 1e-1
+
+    # Original
+    # learning_rate = 1e-1
+    
     theta = np.random.uniform(low=-1, high=1, size=(featDims, 1))  # Initialize theta
 
-    init_new_algo()
+    feedback_collector = init_new_algo()  
 
     # prep reward learning dataset
     inputs = []
@@ -281,7 +303,7 @@ if __name__ == "__main__":
 
             if was_feedback_provided:
                 feedback_collector.collect_feedback((obs, act_idx), fb_val)
-                theta = update_reward_model(obs, act_idx, theta, fb_val, learning_rate)
+                theta = simple_update_reward_model(obs, act_idx, theta, fb_val, learning_rate)
 
             total_reward += rew
             print(total_reward)

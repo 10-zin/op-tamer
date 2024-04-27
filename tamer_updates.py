@@ -2,6 +2,16 @@
 import numpy as np
 from utils import get_feat_frozenlake
 
+# Update: added random import - new edit
+import random
+
+# Update: added act dict - new edit
+ACT_DICT = {
+    0: 'LEFT',
+    1: 'DOWN',
+    2: 'RIGHT',
+    3: 'UP',
+}
 
 def get_greedy_action(obs, acts_all, theta):
     '''
@@ -26,8 +36,22 @@ def get_greedy_action(obs, acts_all, theta):
     #####
     feat_acts_all = [get_feat_frozenlake(obs, act ) for act in acts_all]
     act_val = np.dot(feat_acts_all, theta)
-    act = np.argmax(act_val)
+    
+    # Update: Epsilon greedy - new edit
+    epsilon=0.3
+    if random.random() < epsilon:
+        return random.choice(list(ACT_DICT.keys())), act_val[random.choice(list(ACT_DICT.keys()))].item()
+    else:
+        act = np.argmax(act_val)
+        return act, act_val[act].item()
 
+    # Original
+    # act = np.argmax(act_val)
+
+    # Debug statements - new edit
+    print("Features for all actions:", feat_acts_all)
+    print("Action values:", act_val)
+    
     return act, act_val[act].item()
 
 
@@ -58,6 +82,16 @@ def update_reward_model(obs, act, theta, fb_val, learning_rate):
     error = fb_val-pred_reward
     gradient = -error*feat_act # assuming loss is mse and pred_reward=features*theta, and we derived wrt theta.
     gradient=gradient.reshape(-1,1)
+
+    # Debug statements - new edit
+    print("Current theta:", theta)
+    print("Error:", error)
+    print("Gradient:", gradient)
+
+    # Update: Adding normalization to theta as it is always favouring going up - new edit
+    # norm_gradient = gradient / (np.linalg.norm(gradient) + 1e-6)
+    # theta += learning_rate * norm_gradient.reshape(-1, 1)
+
     theta-=learning_rate*gradient
 
     return theta
