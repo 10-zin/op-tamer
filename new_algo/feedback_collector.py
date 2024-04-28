@@ -1,5 +1,5 @@
 import random
-from dataset_loader import DataWeigher
+from .dataset_loader import DataWeigher
 
 class FeedbackCollector:
     def __init__(self, feedback_threshold=10, history_buffer_size=100):
@@ -11,6 +11,8 @@ class FeedbackCollector:
         self.neg_history_buffer_size = self.history_buffer_size//2
         self.D_seen = {} 
         self.data_weighter = DataWeigher(success_threshold=0.5)
+
+        self.feedback_threshold = feedback_threshold    # Update: Initialize feedback_threshold
 
 
     def collect_feedback(self, state_action_pair, feedback):
@@ -35,36 +37,67 @@ class FeedbackCollector:
         positive_pairs = [pair for pair in self.feedback_buffer if pair[1] >= 0]  # Assuming positive feedback is represented by values > 0
         negative_pairs = [pair for pair in self.feedback_buffer if pair[1] < 0]  # Assuming negative feedback is represented by values <= 0
 
-        contrastive_pairs = []
-        # min_pairs = min(len(positive_pairs), len(negative_pairs))
+        # Shuffle the lists in place
+        random.shuffle(positive_pairs)
+        random.shuffle(negative_pairs)
 
-        # Forming contrastive pairs from the current buffer
-        # for _ in range(min_pairs):
-        #     pos_pair = positive_pairs.pop(random.randint(0, len(positive_pairs) - 1))
-        #     neg_pair = negative_pairs.pop(random.randint(0, len(negative_pairs) - 1))
-        #     contrastive_pairs.append((pos_pair[0], neg_pair[0]))  # Storing only the state-action part
-
-        contrastive_pairs.extend((pos_pair, neg_pair) for pos_pair, neg_pair in \
-                                 zip(random.shuffle(positive_pairs), random.shuffle(negative_pairs)))
+        # Form contrastive pairs
+        contrastive_pairs = list(zip(positive_pairs, negative_pairs))
 
         # If necessary, supplement with historical data
-        num_pos_remaining_pairs = min(self.feedback_threshold-len(contrastive_pairs), len(self.pos_history_pairs))
-        num_neg_remaining_pairs = min(self.feedback_threshold-len(contrastive_pairs), len(self.neg_history_pairs))
+        num_pos_remaining_pairs = min(len(self.feedback_buffer) - len(contrastive_pairs), len(self.pos_history_pairs))
+        num_neg_remaining_pairs = min(len(self.feedback_buffer) - len(contrastive_pairs), len(self.neg_history_pairs))
 
         pos_history_pairs = random.sample(self.pos_history_pairs, num_pos_remaining_pairs)
         neg_history_pairs = random.sample(self.neg_history_pairs, num_neg_remaining_pairs)
-        
-        contrastive_pairs.extend((pos_pair, neg_pair) for pos_pair, neg_pair in zip(pos_history_pairs, neg_history_pairs))
+
+        contrastive_pairs.extend(zip(pos_history_pairs, neg_history_pairs))
 
         # Update the historical data buffer with the new feedback
         self.pos_history_pairs.extend(positive_pairs)
         self.neg_history_pairs.extend(negative_pairs)
 
-        self.pos_history_pairs[-self.pos_history_buffer_size:]
-        self.neg_history_pairs[-self.neg_history_buffer_size:]
+        self.pos_history_pairs = self.pos_history_pairs[-self.pos_history_buffer_size:]
+        self.neg_history_pairs = self.neg_history_pairs[-self.neg_history_buffer_size:]
 
-        # Return or process the formed contrastive pairs
         return contrastive_pairs
+
+    # Original
+    # def form_contrastive_pairs(self):
+    #     # Form contrastive pairs from the feedback buffer and previously collected data if necessary
+    #     positive_pairs = [pair for pair in self.feedback_buffer if pair[1] >= 0]  # Assuming positive feedback is represented by values > 0
+    #     negative_pairs = [pair for pair in self.feedback_buffer if pair[1] < 0]  # Assuming negative feedback is represented by values <= 0
+
+    #     contrastive_pairs = []
+    #     # min_pairs = min(len(positive_pairs), len(negative_pairs))
+
+    #     # Forming contrastive pairs from the current buffer
+    #     # for _ in range(min_pairs):
+    #     #     pos_pair = positive_pairs.pop(random.randint(0, len(positive_pairs) - 1))
+    #     #     neg_pair = negative_pairs.pop(random.randint(0, len(negative_pairs) - 1))
+    #     #     contrastive_pairs.append((pos_pair[0], neg_pair[0]))  # Storing only the state-action part
+
+    #     contrastive_pairs.extend((pos_pair, neg_pair) for pos_pair, neg_pair in \
+    #                              zip(random.shuffle(positive_pairs), random.shuffle(negative_pairs)))
+
+    #     # If necessary, supplement with historical data
+    #     num_pos_remaining_pairs = min(self.feedback_threshold-len(contrastive_pairs), len(self.pos_history_pairs))
+    #     num_neg_remaining_pairs = min(self.feedback_threshold-len(contrastive_pairs), len(self.neg_history_pairs))
+
+    #     pos_history_pairs = random.sample(self.pos_history_pairs, num_pos_remaining_pairs)
+    #     neg_history_pairs = random.sample(self.neg_history_pairs, num_neg_remaining_pairs)
+        
+    #     contrastive_pairs.extend((pos_pair, neg_pair) for pos_pair, neg_pair in zip(pos_history_pairs, neg_history_pairs))
+
+    #     # Update the historical data buffer with the new feedback
+    #     self.pos_history_pairs.extend(positive_pairs)
+    #     self.neg_history_pairs.extend(negative_pairs)
+
+    #     self.pos_history_pairs[-self.pos_history_buffer_size:]
+    #     self.neg_history_pairs[-self.neg_history_buffer_size:]
+
+    #     # Return or process the formed contrastive pairs
+    #     return contrastive_pairs
     
     def form_weighted_constrastive_pairs(self):
         contrastive_pairs = self.form_contrastive_pairs()
