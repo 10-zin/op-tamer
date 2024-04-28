@@ -2,6 +2,16 @@
 import numpy as np
 from utils import get_feat_frozenlake
 
+# Update: added random import - new edit
+import random
+
+# Update: added act dict - new edit
+ACT_DICT = {
+	0: 'LEFT',
+	1: 'DOWN',
+	2: 'RIGHT',
+	3: 'UP',
+}
 
 def get_greedy_action(obs, acts_all, theta):
 	'''
@@ -22,6 +32,13 @@ def get_greedy_action(obs, acts_all, theta):
 	# Compute features for all actions in current state (HINT: use get_feat_frozenlake)
 	# Compute values for each action
 	# Choose action greedily based on computed vals
+
+	# Original
+	# feat_acts_all = [get_feat_frozenlake(obs, act ) for act in acts_all]
+	# act_val = np.dot(feat_acts_all, theta)
+	# act = np.argmax(act_val)
+	# return act, act_val[act].item()
+	
 	f1 = []
 	for action in acts_all:
 		f1.append(get_feat_frozenlake(obs, action))
@@ -56,11 +73,23 @@ def update_reward_model(obs, act, theta, fb_val, learning_rate):
 	# Compute error
 	# Compute Gradient
 	# Update weights
-	f2 =  get_feat_frozenlake(obs, act)
-	calc_err = fb_val - np.dot(f2, theta)
-	calc_grads = -1 * calc_err * f2
-	theta -= learning_rate * calc_grads.reshape(-1, 1)
-	#####
+	feat_act = get_feat_frozenlake(obs, act)
+	pred_reward = np.dot(feat_act, theta)
+	error = fb_val-pred_reward
+	gradient = -error*feat_act # assuming loss is mse and pred_reward=features*theta, and we derived wrt theta.
+	gradient=gradient.reshape(-1,1)
+
+	# Debug statements - new edit
+	print("Current theta:", theta)
+	print("Error:", error)
+	print("Gradient:", gradient)
+
+	# Update: Adding normalization to theta as it is always favouring going up - new edit
+	# norm_gradient = gradient / (np.linalg.norm(gradient) + 1e-6)
+	# theta += learning_rate * norm_gradient.reshape(-1, 1)
+
+	theta-=learning_rate*gradient
+
 	return theta
 
 def update_reward_model_with_credit(obs_list, act_list, theta, fb_val, credit_weights, learning_rate):
@@ -86,21 +115,20 @@ def update_reward_model_with_credit(obs_list, act_list, theta, fb_val, credit_we
 	# Compute error
 	# Compute Gradient
 	# Update weights
-	f3 = 0
-
-	if len(obs_list) == 1:
-		f3 = get_feat_frozenlake(obs_list[0], act_list[0])
-	elif len(obs_list) == 2:
-		wts = [0.8, 0.2]
-		for i, (obs, act) in enumerate(zip(obs_list, act_list)):
-			f3 += wts[i] * get_feat_frozenlake(obs, act)
+	credit_features=0
+	if len(obs_list)==1:
+		credit_features = get_feat_frozenlake(obs_list[0], act_list[0])
+	elif len(obs_list)==2:
+		weights=[0.8,0.2]
+		credit_features=sum(weights[i]*get_feat_frozenlake(obs_list[i], act_list[i]) for i in range(2))
 	else:
 		for obs, act, credit in zip(reversed(obs_list), reversed(act_list), reversed(credit_weights)):
-			f3 += get_feat_frozenlake(obs, act) * credit
+			feature = get_feat_frozenlake(obs, act)
+			credit_features+=feature*credit
+	pred_reward = np.dot(credit_features, theta)
+	error=fb_val-pred_reward
+	gradient = -error*credit_features
+	gradient=gradient.reshape(-1,1)
+	theta-=learning_rate*gradient #maybe normalize with len(credit_weights)
 
-	calc_err = fb_val - np.dot(f3, theta)
-	calc_grads = -1 * calc_err * f3
-	reshpd_grads = calc_grads.reshape(-1, 1)
-	theta -= learning_rate * reshpd_grads
-	#####
 	return theta
