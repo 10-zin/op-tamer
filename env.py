@@ -37,6 +37,16 @@ MAPS = {
         "FFMH",
         "HFFG",
     ],
+    "8x8": [
+        "SFFFMFFF",
+        "FFFFFFFF",
+        "FFFHFFFF",
+        "FMFFFHFF",
+        "FMFHFFFF",
+        "FHHFFFHF",
+        "FMFFHFHF",
+        "MFFHFFFG",
+    ],
 }
 
 
@@ -224,6 +234,8 @@ class IRLEnv(FrozenLakeEnv):
             map_name = "4x4_goalinit"
         if self.version == 4:
             map_name = "4x4_lowerinit"
+        if self.version == 5:
+            map_name = "8x8"
 
         self.fixed_monster_action = None
         
@@ -330,6 +342,9 @@ class IRLEnv(FrozenLakeEnv):
             probs[:] = 0.03
             probs[self.fixed_monster_action] = 0.9
         if self.version == 4:
+            probs[:] = 0.0
+            probs[0] = 1.0
+        if self.version == 5:
             probs[:] = 0.0
             probs[0] = 1.0
         probs = probs / np.sum(probs)

@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import pygame
 from pygame.locals import *
@@ -27,7 +28,7 @@ def train_original():
     np.random.seed(100)  # Set random seed for repeatability
 
     # Initialize the environment
-    env = IRLEnv(render_mode="human", seed=0, version=4)
+    env = IRLEnv(render_mode="human", seed=0, version=5)
 
     # Initialize theta
     dummy_obs = get_feat_frozenlake([0, 0], 0)
@@ -107,11 +108,11 @@ def train_updated():
 
 class TamerUpdated:
     def __init__(self):
-        self.feedback_collector = FeedbackCollector(feedback_threshold=4, history_buffer_size=30)
+        self.feedback_collector = FeedbackCollector(feedback_threshold=6, history_buffer_size=30)
         self.update_reward_model = contrastive_update_reward_model
 
     def train(self):
-        env = IRLEnv(render_mode="human", seed=0, version=4)
+        env = IRLEnv(render_mode="human", seed=0, version=5)
         dummy_obs = get_feat_frozenlake([0, 0], 0)
         featDims = dummy_obs.shape[0]
         self.theta = np.random.uniform(low=-1, high=1, size=(featDims, 1))
@@ -149,6 +150,8 @@ class TamerUpdated:
 
             for t in range(T_terminal):
                 act_idx, act_val = get_greedy_action(obs, list(ACT_DICT.keys()), self.theta)
+                    # print("random action--------\n\n\n")
+                    # print(act_idx)
                 print(f"t={t:2d}: Action {ACT_DICT[act_idx]:5s} with val {act_val: 4.1f}. Feedback? ", end="")
                 was_feedback_provided = False
 
@@ -173,25 +176,44 @@ class TamerUpdated:
                 if not was_feedback_provided:
                     print("No")
 
+
                 if was_feedback_provided:
-                    print("yes feedback provided")
-                    print(self.feedback_collector.feedback_buffer)
-                    self.feedback_collector.collect_feedback((obs, act_idx), fb_val)
-                    if self.feedback_collector.is_enough_feedback():
-                        print("got enough feedback!! \n\n")
-                        weighted_contrastive_pairs = self.feedback_collector.form_weighted_constrastive_pairs()
-                        print(weighted_contrastive_pairs)
-                        self.update_reward_model(weighted_contrastive_pairs, self.theta, learning_rate=1e-2, margin=20)
-                        updated_model_atleast_once = True
-                        self.feedback_collector.update_seen_data()
-                        self.feedback_collector.reset_live_feedback_buffer()
-                        print("reset feedback!!\n\n")
+                    # print("yes feedback provided")
+                    # print(self.feedback_collector.feedback_buffer)
+                    # self.feedback_collector.collect_feedback((obs, act_idx), fb_val)
+                    # self.theta = update_reward_model(obs, act_idx, self.theta, fb_val, 1e-1)
+                    if t < self.feedback_collector.feedback_threshold*2:
+                        self.feedback_collector.collect_feedback((obs, act_idx), fb_val)
+                        self.theta = update_reward_model(obs, act_idx, self.theta, fb_val, 1e-1)
+                    else:
+                        print("\n\n----starting -- contrastive")
+                        self.feedback_collector.collect_feedback((obs, act_idx), fb_val)
+                        if self.feedback_collector.is_enough_feedback():
+                            print("got enough feedback!! \n\n")
+                            weighted_contrastive_pairs = self.feedback_collector.form_weighted_constrastive_pairs()
+                            print(weighted_contrastive_pairs)
+                            self.update_reward_model(weighted_contrastive_pairs, self.theta, learning_rate=1e-1, margin=20)
+                            updated_model_atleast_once = True
+                            self.feedback_collector.update_seen_data()
+                            self.feedback_collector.reset_live_feedback_buffer()
+                            print("reset feedback!!\n\n")
 
                 total_reward += rew
                 if term or trunc:
+                    # print("\n\n-------------doing offline training!!")
+                    # import time
+                    # time.sleep(2)
+                    # weighted_contrastive_pairs = self.feedback_collector.form_weighted_constrastive_pairs()
+                    # print(weighted_contrastive_pairs)
+                    # self.theta=self.update_reward_model(weighted_contrastive_pairs, self.theta, learning_rate=1e-1, margin=20)
+                    # updated_model_atleast_once = True
+                    # self.feedback_collector.update_seen_data()
+                    # self.feedback_collector.reset_live_feedback_buffer()
+                    # print("reset feedback!!\n\n")
+
                     if not updated_model_atleast_once:
                         weighted_contrastive_pairs = self.feedback_collector.form_weighted_constrastive_pairs()
-                        self.update_reward_model(weighted_contrastive_pairs, self.theta, learning_rate=1e-2, margin=20)
+                        self.update_reward_model(weighted_contrastive_pairs, self.theta, learning_rate=1e-1, margin=10)
                         updated_model_atleast_once = True
                         self.feedback_collector.update_seen_data()
                         self.feedback_collector.reset_live_feedback_buffer()

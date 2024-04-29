@@ -74,6 +74,8 @@ def update_reward_model(obs, act, theta, fb_val, learning_rate):
 	# Compute Gradient
 	# Update weights
 	feat_act = get_feat_frozenlake(obs, act)
+	# print("feature matrix")
+	# print(feat_act)
 	pred_reward = np.dot(feat_act, theta)
 	error = fb_val-pred_reward
 	gradient = -error*feat_act # assuming loss is mse and pred_reward=features*theta, and we derived wrt theta.
@@ -81,8 +83,8 @@ def update_reward_model(obs, act, theta, fb_val, learning_rate):
 
 	# Debug statements - new edit
 	print("Current theta:", theta)
-	print("Error:", error)
-	print("Gradient:", gradient)
+	# print("Error:", error)
+	# print("Gradient:", gradient)
 
 	# Update: Adding normalization to theta as it is always favouring going up - new edit
 	# norm_gradient = gradient / (np.linalg.norm(gradient) + 1e-6)

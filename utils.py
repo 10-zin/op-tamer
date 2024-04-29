@@ -40,6 +40,9 @@ def get_feat_frozenlake(obs, act):
     Returns:
     A numpy array of size 16*4 with features for the provided obs and act.
     '''
-    arr = np.zeros(16 * 4)
+    # arr = np.zeros(16 * 4)
+    arr = np.zeros(64 * 4)
+    print('frozen..')
+    print(obs, act)
     arr[obs[0] * 4 + act] = 1
     return arr

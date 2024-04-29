@@ -48,7 +48,7 @@ class FeedbackCollector:
         print(negative_pairs)
 
         if len(positive_pairs)>len(negative_pairs):
-            negative_pairs.append(None, None)
+            negative_pairs.append((None, None))
         
         contrastive_pairs=[]
         for i in range(max(len(positive_pairs), len(negative_pairs))):
