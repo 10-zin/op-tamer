@@ -107,7 +107,7 @@ def train_updated():
 
 class TamerUpdated:
     def __init__(self):
-        self.feedback_collector = FeedbackCollector(feedback_threshold=6, history_buffer_size=30)
+        self.feedback_collector = FeedbackCollector(feedback_threshold=4, history_buffer_size=30)
         self.update_reward_model = contrastive_update_reward_model
 
     def train(self):
@@ -174,13 +174,18 @@ class TamerUpdated:
                     print("No")
 
                 if was_feedback_provided:
+                    print("yes feedback provided")
+                    print(self.feedback_collector.feedback_buffer)
                     self.feedback_collector.collect_feedback((obs, act_idx), fb_val)
                     if self.feedback_collector.is_enough_feedback():
+                        print("got enough feedback!! \n\n")
                         weighted_contrastive_pairs = self.feedback_collector.form_weighted_constrastive_pairs()
+                        print(weighted_contrastive_pairs)
                         self.update_reward_model(weighted_contrastive_pairs, self.theta, learning_rate=1e-2, margin=20)
                         updated_model_atleast_once = True
                         self.feedback_collector.update_seen_data()
                         self.feedback_collector.reset_live_feedback_buffer()
+                        print("reset feedback!!\n\n")
 
                 total_reward += rew
                 if term or trunc:

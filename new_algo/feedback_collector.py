@@ -26,11 +26,13 @@ class FeedbackCollector:
         self.feedback_buffer = []  # Clear the buffer after forming pairs
     
     def update_seen_data(self,):
-        for state, action, _ in self.feedback_buffer:
-            if (state, action) in self.D_seen:
-                self.D_seen[(state, action)] += 1
+        # print(self.feedback_buffer)
+        # print((state, action))
+        for (state, action), _ in self.feedback_buffer:
+            if str((state, action)) in self.D_seen:
+                self.D_seen[str((state, action))] += 1
             else:
-                self.D_seen[(state, action)] = 1
+                self.D_seen[str((state, action))] = 1
 
     def form_contrastive_pairs(self):
         # Form contrastive pairs from the feedback buffer and previously collected data if necessary
@@ -40,9 +42,22 @@ class FeedbackCollector:
         # Shuffle the lists in place
         random.shuffle(positive_pairs)
         random.shuffle(negative_pairs)
+        print("inside contrastive")
+        print(positive_pairs)
+        print('---\n\n')
+        print(negative_pairs)
+
+        if len(positive_pairs)>len(negative_pairs):
+            negative_pairs.append(None, None)
+        
+        contrastive_pairs=[]
+        for i in range(max(len(positive_pairs), len(negative_pairs))):
+            pos_pair= (None, None) if i >= len(positive_pairs) else positive_pairs[i]
+            neg_pair= (None, None) if i >= len(negative_pairs) else negative_pairs[i]
+            contrastive_pairs.append((pos_pair, neg_pair))
 
         # Form contrastive pairs
-        contrastive_pairs = list(zip(positive_pairs, negative_pairs))
+        # contrastive_pairs = list(zip(positive_pairs, negative_pairs))
 
         # If necessary, supplement with historical data
         num_pos_remaining_pairs = min(len(self.feedback_buffer) - len(contrastive_pairs), len(self.pos_history_pairs))
@@ -101,6 +116,7 @@ class FeedbackCollector:
     
     def form_weighted_constrastive_pairs(self):
         contrastive_pairs = self.form_contrastive_pairs()
+        # print("contrastive", contrastive_pairs)
         weighted_contrastive_pairs = self.data_weighter.weight_contrastive_pairs(self.D_seen, contrastive_pairs)
         return weighted_contrastive_pairs
 
