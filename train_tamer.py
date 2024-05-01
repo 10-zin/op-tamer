@@ -294,6 +294,7 @@ class TamerUpdated2:
                 if was_feedback_provided:
                     self.feedback_collector.collect_feedback((obs, act_idx), fb_val)
                     if self.feedback_collector.is_enough_feedback():
+                        print("\n\n----starting -- contrastive -- triplet")
                         triplets = self.feedback_collector.form_triplets()
                         if triplets:
                             self.theta = self.update_reward_model(triplets, self.theta, learning_rate=1e-1, margin=20)
