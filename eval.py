@@ -24,6 +24,8 @@ def get_episode_returns(env_version, reward_model, n_episodes, max_ep_len=25, re
 
         total_reward = 0
         for t in range(max_ep_len):
+            # print(obs.shape)
+            # print(reward_model)
             act, _ = get_greedy_action(obs, [a for a in ACT_DICT.keys()], reward_model)
 
             obs_next, rew, term, trunc, info = env.step(act)
@@ -52,7 +54,7 @@ if __name__ == '__main__':
     fname = sys.argv[1]
     render_human = bool(int(sys.argv[2])) if len(sys.argv) > 2 else False
     assert os.path.exists(fname), f"Policy file '{fname}' does not exist"
-    env_version = 4
+    env_version = 5
     n_episodes = 1000
     reward_model = loadObject(fname)
     ep_returns = get_episode_returns(env_version, reward_model, n_episodes=n_episodes, render_human=render_human)
