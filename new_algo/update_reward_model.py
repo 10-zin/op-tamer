@@ -19,26 +19,26 @@ def update_reward_model_weighted_contrastive(weighted_contrastive_pairs, theta, 
         pos_regression_error = ((pos_pred_reward - pos_reward_feedback)/2) ** 2
         neg_regression_error = ((neg_pred_reward - neg_reward_feedback)/2) ** 2
         total_loss = contrastive_error + pos_weight * pos_regression_error + neg_weight * neg_regression_error
-        print(contrastive_error, margin, pos_pred_reward, pos_reward_feedback, neg_pred_reward, neg_reward_feedback, pos_weight, neg_weight)
-        print(total_loss)
-        print('total loss\n\n')
+        # print(contrastive_error, margin, pos_pred_reward, pos_reward_feedback, neg_pred_reward, neg_reward_feedback, pos_weight, neg_weight)
+        # print(total_loss)
+        # print('total loss\n\n')
         # exit()
         
         # Gradient for regression components (adjusted with weights)
-        print("feature matrix")
-        print(pos_feat)
-        print(neg_feat)
+        # print("feature matrix")
+        # print(pos_feat)
+        # print(neg_feat)
         grad_regression_pos = pos_weight * (pos_pred_reward - pos_reward_feedback) * pos_feat
         grad_regression_neg = neg_weight * (neg_pred_reward - neg_reward_feedback) * neg_feat
         grad_contrastive=pos_feat-neg_feat if contrastive_error>0 else np.zeros(pos_feat)
         
         # Total Gradient is the sum of both regression gradients
         total_gradient = grad_contrastive+grad_regression_pos + grad_regression_neg
-        print(total_gradient)
+        # print(total_gradient)
         
         # Update theta using the total gradient
         theta -= learning_rate * total_gradient.reshape(-1, 1)
-        print(theta)
+        # print(theta)
 
     return theta
 
